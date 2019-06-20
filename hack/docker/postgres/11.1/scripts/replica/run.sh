@@ -9,27 +9,40 @@ export PGPASSWORD=${POSTGRES_PASSWORD:-postgres}
 
 export ARCHIVE=${ARCHIVE:-}
 
-# Waiting for running Postgres
-while true; do
-  echo "Attempting pg_isready on primary"
-  pg_isready --host="$PRIMARY_HOST" --timeout=2 &>/dev/null && break
-  # check if current pod became leader itself
-  if [[ -e "/tmp/pg-failover-trigger" ]]; then
-    echo "Postgres promotion trigger_file found. Running primary run script"
-    exec /scripts/primary/run.sh
-  fi
-  sleep 2
+# We do not need to check for pg-failover-trigger, because we have a limited time in this loops.
+# If we cannot reach the primary, we will suicide and be rescheduled as master.
+
+for i in 1 2 3 ; do
+    if pg_isready --host="$PRIMARY_HOST" --timeout=2
+    then
+      echo "Connection Test was successful."
+      break;
+    else
+      echo "Connection Test was not successful."
+
+      if [[ ${i} -eq 3 ]]
+      then
+        echo "Cannot connect to primary. Exiting."
+        exit 2
+      fi
+    fi
 done
 
-while true; do
-  echo "Attempting query on primary"
-  psql -h "$PRIMARY_HOST" --no-password --username=postgres --command="select now();" &>/dev/null && break
-  # check if current pod became leader itself
-  if [[ -e "/tmp/pg-failover-trigger" ]]; then
-    echo "Postgres promotion trigger_file found. Running primary run script"
-    exec /scripts/primary/run.sh
-  fi
-  sleep 2
+for i in 1 2 3 ; do
+    if psql -h "$PRIMARY_HOST" --no-password --username=postgres --command="select now();"
+    then
+      echo "Query Test was successful."
+      break;
+    else
+      echo "Query Test was not successful."
+
+      if [[ ${i} -eq 3 ]]
+      then
+        echo "Cannot query primary. Exiting."
+        exit 2
+      fi
+
+    fi
 done
 
 # get basebackup
