@@ -29,7 +29,7 @@ for i in 1 2 3 ; do
 done
 
 for i in 1 2 3 ; do
-    if psql -h "$PRIMARY_HOST" --no-password --username=postgres --command="select now();"
+    if PGPASSWORD=${REPLICA_PASSWORD} psql -h "$PRIMARY_HOST" --username=${REPLICA_USER} --command="select now();"
     then
       echo "Query Test was successful."
       break;

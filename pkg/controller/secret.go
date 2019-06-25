@@ -16,6 +16,8 @@ import (
 const (
 	PostgresUser     = "POSTGRES_USER"
 	PostgresPassword = "POSTGRES_PASSWORD"
+	ReplicaUser      = "REPLICA_USER"
+	ReplicaPassword  = "REPLICA_PASSWORD"
 )
 
 func (c *Controller) ensureDatabaseSecret(postgres *api.Postgres) error {
@@ -78,6 +80,8 @@ func (c *Controller) createDatabaseSecret(postgres *api.Postgres) (*core.SecretV
 		Data: map[string][]byte{
 			PostgresUser:     []byte("postgres"),
 			PostgresPassword: []byte(rand.GeneratePassword()),
+			ReplicaUser:      []byte("replica"),
+			ReplicaPassword:  []byte(rand.GeneratePassword()),
 		},
 	}
 	if _, err := c.Client.CoreV1().Secrets(postgres.Namespace).Create(secret); err != nil {
@@ -101,8 +105,18 @@ func (c *Controller) upgradeDatabaseSecret(postgres *api.Postgres) error {
 		if _, ok := in.Data[PostgresUser]; !ok {
 			in.StringData = map[string]string{PostgresUser: "postgres"}
 		}
+
+		if _, ok := in.Data[ReplicaUser]; !ok {
+			in.StringData = map[string]string{ReplicaUser: "replica"}
+		}
+
+		if _, ok := in.Data[ReplicaPassword]; !ok {
+			in.StringData = map[string]string{ReplicaPassword: rand.GeneratePassword()}
+		}
+
 		return in
 	})
+
 	return err
 }
 

@@ -28,10 +28,14 @@ cat /scripts/primary/postgresql.conf >> /tmp/postgresql.conf
 mv /tmp/postgresql.conf "$PGDATA/postgresql.conf"
 
 # setup pg_hba.conf
-{ echo; echo 'local all         all                         trust'; }   >>"$PGDATA/pg_hba.conf"
-{       echo 'host  all         all         127.0.0.1/32    trust'; }   >>"$PGDATA/pg_hba.conf"
-{       echo 'host  all         all         0.0.0.0/0       md5'; }     >>"$PGDATA/pg_hba.conf"
-{       echo 'host  replication postgres    0.0.0.0/0       md5'; }     >>"$PGDATA/pg_hba.conf"
+{ echo; echo 'local all         all                             trust'; }   >>"$PGDATA/pg_hba.conf"
+{       echo 'host  all         all             127.0.0.1/32    trust'; }   >>"$PGDATA/pg_hba.conf"
+{       echo 'host  all         all             0.0.0.0/0       md5'; }     >>"$PGDATA/pg_hba.conf"
+{       echo 'host  replication postgres        0.0.0.0/0       md5'; }     >>"$PGDATA/pg_hba.conf"
+{       echo "host  all         ${REPLICA_USER} 0.0.0.0/0       md5"; }     >>"$PGDATA/pg_hba.conf"
+
+
+cat "${PGDATA}/pg_hba.conf"
 
 # start postgres
 pg_ctl -D "$PGDATA" -w start >/dev/null
@@ -51,14 +55,20 @@ EOSQL
 fi
 
 if [ "$POSTGRES_USER" = "postgres" ]; then
-  op="ALTER"
+  postgresOperation="ALTER"
 else
-  op="CREATE"
+  postgresOperation="CREATE"
 fi
 
 # alter postgres superuser
 "${psql[@]}" --username postgres <<-EOSQL
-    $op USER "$POSTGRES_USER" WITH SUPERUSER PASSWORD '$POSTGRES_PASSWORD';
+    $postgresOperation USER "$POSTGRES_USER" WITH SUPERUSER PASSWORD '$POSTGRES_PASSWORD';
+EOSQL
+echo
+
+# alter postgres superuser
+"${psql[@]}" --username postgres <<-EOSQL
+    CREATE USER "$REPLICA_USER" WITH PASSWORD '$REPLICA_PASSWORD';
 EOSQL
 echo
 

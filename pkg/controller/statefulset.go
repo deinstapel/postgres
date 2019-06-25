@@ -339,6 +339,28 @@ func upsertEnv(statefulSet *apps.StatefulSet, postgres *api.Postgres, envs []cor
 				},
 			},
 		},
+		{
+			Name: ReplicaUser,
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: postgres.Spec.DatabaseSecret.SecretName,
+					},
+					Key: ReplicaUser,
+				},
+			},
+		},
+		{
+			Name: ReplicaPassword,
+			ValueFrom: &core.EnvVarSource{
+				SecretKeyRef: &core.SecretKeySelector{
+					LocalObjectReference: core.LocalObjectReference{
+						Name: postgres.Spec.DatabaseSecret.SecretName,
+					},
+					Key: ReplicaPassword,
+				},
+			},
+		},
 	}
 
 	envList = append(envList, envs...)
